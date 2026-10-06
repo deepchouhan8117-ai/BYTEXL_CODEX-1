@@ -1,0 +1,16 @@
+{
+  "name": "edu-pulse-analytics",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Student analytics dashboard backed by a Supabase dataset API for Vercel deployment.",
+  "scripts": {
+    "dev": "node server.js",
+    "check": "node --check api/students.js && node --check server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "devDependencies": {
+    "vercel": "^41.0.0"
+  }
+}
