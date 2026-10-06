@@ -1,4 +1,6 @@
-# EduPulse Analytics Platform
+# BYTEXL_CODEX-1
+
+AI-Powered Student Analytics and Success Platform
 
 This project serves the dashboard from `index.html`, with a Supabase-backed persistence layer exposed through the Vercel `/api/students` function.
 
