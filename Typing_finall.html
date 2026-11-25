@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typing Speed Test</title>
+<style>
+/* Dark minimal theme (inspired by the Monkeytype look) */
+:root{--bg:#323437;--panel:#2c2e31;--main:#e2b714;--sub:#646669;--text:#d1d0c5;--err:#ca4754;--errx:#7e2a33}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+main{max-width:1100px;margin:0 auto;padding:36px 24px;min-height:100vh;display:flex;flex-direction:column}
+button,.nav button{font:inherit;color:var(--sub);background:none;border:0;cursor:pointer;padding:6px 12px;border-radius:6px}
+button:hover{color:var(--text)}
+button[aria-pressed=true]{color:var(--main)}
+button:focus-visible{outline:2px solid var(--main)}
+.logo{display:flex;align-items:center;gap:12px;color:var(--main)}
+.logo h1{margin:0;font-size:2rem;color:var(--text);font-weight:600;letter-spacing:-.02em}
+.logo small{display:block;color:var(--sub);font-size:11px;margin-bottom:-4px}
+.config{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin:36px 0 40px;transition:opacity .3s}
+.grp{display:flex;background:var(--panel);border-radius:8px;padding:4px}
+body.typing .config,body.typing .foot{opacity:0}
+#stage{margin-top:20px}
+#live{color:var(--main);font-size:1.8rem;height:2.4rem}
+#wrap{height:5.1em;overflow:hidden;font-size:calc(clamp(1.3rem,3vw,1.9rem)*var(--fs,1))}
+#words{position:relative;line-height:0;transition:transform .15s}
+.word{display:inline-block;line-height:1.7;margin-right:.6em}
+.word span{color:var(--sub)}
+.word .ok{color:var(--text)}
+.word .bad{color:var(--err)}
+.word .x{color:var(--errx)}
+.word.err{text-decoration:underline;text-decoration-color:var(--err);text-decoration-thickness:2px}
+#caret{position:absolute;width:2px;height:1.3em;margin-top:.2em;background:var(--main);border-radius:2px;transition:left .08s,top .08s}
+#caret.idle{animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#caret.idle{animation:none}#words,#caret{transition:none}}
+#restart{display:block;margin:36px auto 0;font-size:1.5rem}
+.foot{margin-top:auto;padding-top:30px;text-align:center;color:var(--sub);font-size:12px;transition:opacity .3s}
+kbd{background:var(--sub);color:var(--bg);padding:1px 6px;border-radius:4px;font-family:inherit}
+/* Result screen */
+#result{margin-top:10px}
+.rtop{display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:center}
+@media (max-width:700px){.rtop{grid-template-columns:1fr}}
+.big small{display:block;color:var(--sub);font-size:1.2rem}
+.big b{display:block;color:var(--main);font-size:3.6rem;line-height:1.1;margin-bottom:10px}
+#graph{width:100%;height:auto;overflow:visible}
+#graph text{fill:var(--sub);font-size:11px}
+#graph .ax{stroke:var(--sub);stroke-width:1}
+#graph polyline{fill:none;stroke-width:2.5;stroke-linejoin:round}
+#graph .lw{stroke:var(--main)}
+#graph .lr{stroke:var(--sub)}
+.rrow{display:flex;flex-wrap:wrap;gap:36px;margin:28px 0}
+.rrow small{display:block;color:var(--sub)}
+.rrow span{font-size:1.4rem;color:var(--main)}
+#next{display:block;margin:0 auto;font-size:1.5rem}
+
+.top{display:flex;align-items:center;justify-content:space-between}
+.top>div{display:flex;align-items:center}
+.nav{gap:2px;margin-left:12px}
+.nav button,.rt button{font-size:1.1rem;padding:6px 9px}
+.grp.dim{opacity:.35;pointer-events:none}
+#lang{display:block;margin:0 auto 14px;font-size:1rem}
+#lang.off{visibility:hidden}
+.links{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:22px;color:var(--sub);font-size:12px;transition:opacity .3s}
+.links a{color:var(--sub);text-decoration:none;padding:2px 8px}
+.links a:hover,.links button:hover{color:var(--text)}
+.links button{font-size:12px;padding:2px 8px}
+body.typing .links,body.typing .top{opacity:0}
+.top{transition:opacity .3s}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px;z-index:9}
+#mbox{background:var(--panel);border-radius:10px;width:min(560px,100%);max-height:70vh;overflow:auto;padding:18px}
+#mbox h2{margin:0 0 12px;font-size:1rem;color:var(--main);font-weight:500}
+#mbox p{margin:6px 0;color:var(--text)}
+#mbox input,#mbox textarea{width:100%;background:var(--bg);color:var(--text);border:0;border-radius:6px;padding:10px;font:inherit;margin-bottom:8px}
+#mbox textarea{height:150px;resize:vertical}
+.cmds button{display:block;width:100%;text-align:left;padding:8px 10px}
+.cmds button.sel{background:var(--bg);color:var(--text)}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.opts button{background:var(--bg)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:10}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <div class="logo">
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true"><rect x="1.5" y="1.5" width="37" height="25" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8 10h4M16 10h4M24 10h4M8 18h24" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <div><small>college practical</small><h1>typing speed test</h1></div>
+      </div>
+      <nav class="nav" aria-label="Menu">
+        <button id="bCmd" type="button" title="command line (esc)">⌨&#xFE0E;</button>
+        <button id="bBest" type="button" title="personal bests">♛</button>
+        <button id="bInfo" type="button" title="about &amp; shortcuts">ℹ&#xFE0E;</button>
+        <button id="bSet" type="button" title="settings">⚙&#xFE0E;</button>
+      </nav>
+    </div>
+    <div class="rt"><button id="bBell" type="button" title="notifications">🔔&#xFE0E;</button><button id="bUser" type="button" title="profile">◎</button></div>
+  </header>
+
+  <div class="config" id="config">
+    <div class="grp" id="gOpts"><button id="punct" type="button">@ punctuation</button><button id="nums" type="button"># numbers</button></div>
+    <div class="grp"><button data-m="time" type="button">◷ time</button><button data-m="words" type="button">A words</button><button data-m="quote" type="button">❝ quote</button><button data-m="zen" type="button">▲ zen</button><button data-m="custom" type="button">✎ custom</button></div>
+    <div class="grp" id="vals"></div>
+  </div>
+
+  <div id="stage">
+    <button id="lang" type="button" title="change language"></button>
+    <div id="live" aria-live="off"></div>
+    <div id="wrap" aria-label="Words to type"><div id="words"><div id="caret" class="idle"></div></div></div>
+    <button id="restart" type="button" aria-label="Restart test">↻</button>
+  </div>
+
+  <section id="result" hidden aria-live="polite">
+    <div class="rtop">
+      <div class="big"><small>wpm</small><b id="rWpm">0</b><small>acc</small><b id="rAcc">0%</b></div>
+      <svg id="graph" viewBox="0 0 600 175" role="img" aria-label="Words per minute over time"></svg>
+    </div>
+    <div class="rrow">
+      <div><small>test type</small><span id="rType"></span></div>
+      <div><small>raw</small><span id="rRaw"></span></div>
+      <div><small>characters</small><span id="rChars"></span></div>
+      <div><small>time</small><span id="rTime"></span></div>
+      <div><small>best (this setting)</small><span id="rBest"></span></div>
+    </div>
+    <button id="next" type="button" aria-label="Next test">↻</button>
+    <p class="foot" style="opacity:1">characters = correct / incorrect / extra / missed</p>
+  </section>
+
+  <div class="foot"><kbd>tab</kbd> + <kbd>enter</kbd> - restart test<br><br><kbd>esc</kbd> or <kbd>ctrl</kbd>+<kbd>shift</kbd>+<kbd>p</kbd> - command line<span id="zenHint" hidden><br><br><kbd>shift</kbd>+<kbd>enter</kbd> - finish zen test</span></div>
+  <div class="links">
+    <div><a href="#">contact</a><a href="#">support</a><a href="#">github</a><a href="#">discord</a><a href="#">twitter</a><a href="#">terms</a><a href="#">security</a><a href="#">privacy</a></div>
+    <div><button id="themeBtn" type="button"></button><span>v1.0</span></div>
+  </div>
+</main>
+<div id="modal" hidden><div id="mbox"></div></div><div id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+  var LIST=("the be of and a to in he have it that for they with as not on she at by this we you do but from or which one would all will there say who make when can more if no man out other so what time up go about than into could state only new year some take come these know see use get like then first any work now may such give over think most even find day also after way many must look before great back through long where much should well people down own just because good each those feel seem how high too place little world very still nation hand old life tell write become here show house both between need mean call develop under last right move thing general school never same another begin while number part turn real leave might want point form off child few small since against ask late home interest large person end open public follow during present without again hold govern around possible head consider word program problem however lead system set order eye plan run keep face fact group play stand increase early course change help line").split(" ");
+  var VALS={time:[15,30,60,120],words:[10,25,50,100],quote:["short","medium","long"],zen:[],custom:[]};
+  var LANGS={english:LIST,spanish:("de la que el en y a los se del las un por con no una su para es al lo como m\u00e1s pero sus le ya o este s\u00ed porque esta entre cuando muy sin sobre tambi\u00e9n me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos esto antes algunos qu\u00e9 unos yo otro otras otra tanto esa estos mucho nada muchos cual poco ella estar estas algo casa tiempo vida d\u00eda a\u00f1o mundo mano parte lugar gente trabajo agua cosa hombre mujer ciudad").split(" ")};
+  var QUOTES=["The early bird catches the worm.","Actions speak louder than words.","A stitch in time saves nine.","Fortune favors the bold.","Well begun is half done, but the race is not won until the last step is taken.","Do not wait to strike till the iron is hot; but make it hot by striking.","Slow and steady wins the race, for the patient traveler always reaches the end of the road.","It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity.","Call me Ishmael. Some years ago, never mind how long precisely, having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world."];
+  var THEMES={"serika dark":{bg:"#323437",panel:"#2c2e31",main:"#e2b714",sub:"#646669",text:"#d1d0c5",err:"#ca4754",errx:"#7e2a33"},"dracula":{bg:"#282a36",panel:"#21222c",main:"#bd93f9",sub:"#6272a4",text:"#f8f8f2",err:"#ff5555",errx:"#b03a3a"},"nord":{bg:"#242933",panel:"#1f232c",main:"#88c0d0",sub:"#616e88",text:"#d8dee9",err:"#bf616a",errx:"#7d3f45"},"paper":{bg:"#eeeeee",panel:"#e2e2e2",main:"#444444",sub:"#b2b2b2",text:"#444444",err:"#d70000",errx:"#e8a0a0"}};
+  var CFG={mode:"time",val:30,punct:false,nums:false,lang:"english",text:"",theme:"serika dark",fs:1};
+  try{var sv=JSON.parse(localStorage.getItem("tt-cfg")); if(sv&&VALS[sv.mode]){for(var k in sv)CFG[k]=sv[k]; if(!LANGS[CFG.lang])CFG.lang="english"; if(!THEMES[CFG.theme])CFG.theme="serika dark";}}catch(e){}
+
+  var $=function(id){return document.getElementById(id);};
+  var wordsEl=$("words"), caretEl=$("caret"), S, wordEls;
+  var rnd=function(n){return Math.floor(Math.random()*n);};
+  function esc(c){return c==="<"?"&lt;":c===">"?"&gt;":c==="&"?"&amp;":c;}
+
+  /* ---- generate words (with optional punctuation / numbers) ---- */
+  function gen(n){
+    var out=[], prev=S.words.length?S.words[S.words.length-1]:"";
+    for(var i=0;i<n;i++){
+      var w;
+      if(CFG.nums && Math.random()<0.12){ w=""; for(var k=0,L=1+rnd(4);k<L;k++) w+=rnd(10); }
+      else w=LANGS[CFG.lang][rnd(LANGS[CFG.lang].length)];
+      if(CFG.punct){
+        if(!prev||/[.?]$/.test(prev)) w=w.charAt(0).toUpperCase()+w.slice(1);
+        var r=Math.random(); if(r<.1) w+=","; else if(r<.17) w+="."; else if(r<.2) w+="?";
+      }
+      out.push(w); prev=w;
+    }
+    return out;
+  }
+  function addWords(n){
+    (typeof n==="number"?gen(n):n).forEach(function(w){
+      S.words.push(w);
+      var d=document.createElement("div"); d.className="word";
+      wordsEl.appendChild(d); wordEls.push(d); paintWord(S.words.length-1);
+    });
+  }
+
+  /* ---- draw one word: grey = untyped, white = correct, red = wrong ---- */
+  function paintWord(i){
+    var w=S.words[i], t=S.typed[i]||"", h="", j;
+    if(!w&&!t) h='<span>\u200b</span>';
+    for(j=0;j<w.length;j++) h+='<span class="'+(j<t.length?(t[j]===w[j]?"ok":"bad"):"")+'">'+esc(w[j])+'</span>';
+    for(j=w.length;j<t.length;j++) h+='<span class="bad x">'+esc(t[j])+'</span>';
+    wordEls[i].innerHTML=h;
+    wordEls[i].className="word"+(i<S.cur&&t!==w?" err":"");
+  }
+
+  /* ---- caret position + line scrolling (3 lines visible) ---- */
+  function placeCaret(){
+    var el=wordEls[S.cur], t=S.typed[S.cur]||"", L=el.children, x, y=el.offsetTop;
+    if(!t.length) x=L[0].offsetLeft;
+    else { var c=L[Math.min(t.length,L.length)-1]; x=c.offsetLeft+c.offsetWidth; }
+    var lh=wordEls[0].getBoundingClientRect().height, line=Math.round(y/lh);
+    if(line-S.scroll>=2) S.scroll=line-1; else if(line<S.scroll) S.scroll=line;
+    wordsEl.style.transform="translateY("+(-S.scroll*lh)+"px)";
+    caretEl.style.left=x+"px"; caretEl.style.top=y+"px";
+  }
+
+  function elapsed(){return S.started?(Date.now()-S.t0)/1000:0;}
+  function fixed(){return CFG.mode!=="time"&&CFG.mode!=="zen";}
+  function live(){ $("live").textContent = CFG.mode==="time" ? Math.max(0,Math.ceil(CFG.val-elapsed())) : CFG.mode==="zen" ? S.cur+" words" : S.cur+"/"+S.words.length; }
+
+  /* ---- statistics (1 word = 5 characters) ---- */
+  function stats(el){
+    var corr=0,raw=0,c=0,inc=0,ext=0,mis=0;
+    for(var i=0;i<=S.cur&&i<S.words.length;i++){
+      var w=S.words[i], t=S.typed[i]||"", done=i<S.cur;
+      if(!t.length&&!done) continue;
+      raw+=t.length+(done?1:0);
+      if(t===w) corr+=w.length+(done?1:0); else if(!done&&w.indexOf(t)===0) corr+=t.length;
+      for(var j=0;j<t.length;j++){ if(j>=w.length) ext++; else if(t[j]===w[j]) c++; else inc++; }
+      if(done&&t.length<w.length) mis+=w.length-t.length;
+    }
+    var m=Math.max(el,1)/60;
+    return {wpm:Math.round(corr/5/m),raw:Math.round(raw/5/m),acc:S.keys?Math.round(S.okKeys/S.keys*100):100,c:c,inc:inc,ext:ext,mis:mis};
+  }
+
+  /* ---- timer ---- */
+  function start(){
+    S.started=true; S.t0=Date.now(); caretEl.classList.remove("idle");
+    document.body.classList.add("typing");
+    S.timer=setInterval(function(){
+      var e=elapsed();
+      while(S.samples.length<Math.floor(e)){ var st=stats(S.samples.length+1); S.samples.push({wpm:st.wpm,raw:st.raw}); }
+      live();
+      if(CFG.mode==="time"&&e>=CFG.val) finish();
+    },200);
+  }
+
+  /* ---- results ---- */
+  function finish(){
+    if(S.done) return;
+    clearInterval(S.timer); S.done=true;
+    var e=CFG.mode==="time"?CFG.val:elapsed(), st=stats(e);
+    S.samples.push({wpm:st.wpm,raw:st.raw}); if(S.samples.length===1) S.samples.push(S.samples[0]);
+    document.body.classList.remove("typing");
+    $("stage").hidden=true; $("result").hidden=false;
+    $("rWpm").textContent=st.wpm; $("rAcc").textContent=st.acc+"%"; $("rRaw").textContent=st.raw;
+    $("rChars").textContent=st.c+"/"+st.inc+"/"+st.ext+"/"+st.mis;
+    $("rTime").textContent=Math.round(e)+"s";
+    $("rType").textContent=CFG.mode+(/^(time|words|quote)$/.test(CFG.mode)?" "+CFG.val:"")+(CFG.punct?" @":"")+(CFG.nums?" #":"");
+    var key="tt-best-"+CFG.mode+CFG.val+(CFG.punct?"p":"")+(CFG.nums?"n":""), best=0;
+    try{best=parseInt(localStorage.getItem(key),10)||0; if(st.wpm>best){best=st.wpm; localStorage.setItem(key,String(best));}}catch(err){best=Math.max(best,st.wpm);}
+    $("rBest").textContent=best+" wpm";
+    try{var H=JSON.parse(localStorage.getItem("tt-hist")||"[]");H.push({w:st.wpm,a:st.acc});localStorage.setItem("tt-hist",JSON.stringify(H.slice(-200)));}catch(err){}
+    graph(Math.round(e));
+  }
+  function graph(total){
+    var s=S.samples, n=s.length, max=10;
+    s.forEach(function(p){max=Math.max(max,p.wpm,p.raw);}); max=Math.ceil(max/10)*10;
+    function pts(k){return s.map(function(p,i){return (40+i/(n-1)*540).toFixed(1)+","+(150-p[k]/max*130).toFixed(1);}).join(" ");}
+    $("graph").innerHTML='<line class="ax" x1="40" y1="150" x2="580" y2="150"/><line class="ax" x1="40" y1="20" x2="40" y2="150"/>'+
+      '<text x="34" y="24" text-anchor="end">'+max+'</text><text x="34" y="150" text-anchor="end">0</text>'+
+      '<text x="40" y="168">0s</text><text x="580" y="168" text-anchor="end">'+total+'s</text>'+
+      '<polyline class="lr" points="'+pts("raw")+'"/><polyline class="lw" points="'+pts("wpm")+'"/>';
+  }
+
+  /* ---- typing logic ---- */
+  function typeChar(ch){
+    if(S.done) return;
+    if(!S.started) start();
+    var t=S.typed[S.cur]||"", w=S.words[S.cur];
+    if(CFG.mode==="zen"){ if(t.length>=25) return; S.keys++; S.okKeys++; S.words[S.cur]=S.typed[S.cur]=t+ch; paintWord(S.cur); placeCaret(); return; }
+    if(t.length>=w.length+19) return;
+    S.keys++; if(ch===w[t.length]) S.okKeys++;
+    S.typed[S.cur]=t+ch; paintWord(S.cur); placeCaret();
+    if(fixed()&&S.cur===S.words.length-1&&S.typed[S.cur]===w) finish();
+  }
+  function space(){
+    var t=S.typed[S.cur]||"";
+    if(S.done||!t.length) return;
+    S.keys++; if(t===S.words[S.cur]) S.okKeys++;
+    if(fixed()&&S.cur===S.words.length-1){ finish(); return; }
+    S.cur++; paintWord(S.cur-1);
+    if(CFG.mode==="zen") addWords([""]);
+    if(CFG.mode==="time"&&S.cur>S.words.length-40) addWords(100);
+    placeCaret(); live();
+  }
+  function back(ctrl){
+    if(S.done) return;
+    var t=S.typed[S.cur]||"";
+    if(!t.length){
+      if(S.cur>0&&S.typed[S.cur-1]!==S.words[S.cur-1]){ S.cur--; paintWord(S.cur); paintWord(S.cur+1); }
+    } else { S.typed[S.cur]=ctrl?"":t.slice(0,-1); if(CFG.mode==="zen") S.words[S.cur]=S.typed[S.cur]; paintWord(S.cur); }
+    placeCaret(); live();
+  }
+
+  document.addEventListener("keydown",function(e){
+    if(modal){ if(e.key==="Escape"){e.preventDefault();closeModal();} return; }
+    if(e.key==="Escape"||(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==="p")){ e.preventDefault(); openCmd(""); return; }
+    if(e.key==="Enter"&&e.shiftKey&&CFG.mode==="zen"&&S.started){ e.preventDefault(); finish(); return; }
+    if(e.key==="Tab"){ e.preventDefault(); S.tab=true; return; }
+    if(e.key==="Enter"&&(S.tab||S.done)){ e.preventDefault(); restart(); return; }
+    S.tab=false;
+    if(e.key==="Backspace"){ e.preventDefault(); back(e.ctrlKey||e.altKey); return; }
+    if(e.ctrlKey||e.metaKey||e.altKey) return;
+    if(e.key===" "){ e.preventDefault(); space(); }
+    else if(e.key.length===1){ e.preventDefault(); typeChar(e.key); }
+  });
+  document.addEventListener("mousemove",function(){document.body.classList.remove("typing");});
+  window.addEventListener("resize",function(){ if(S&&!S.done) placeCaret(); });
+
+  /* ---- setup / restart ---- */
+  function restart(){
+    if(S) clearInterval(S.timer);
+    S={words:[],typed:[],cur:0,started:false,done:false,t0:0,timer:null,keys:0,okKeys:0,samples:[],scroll:0,tab:false};
+    wordsEl.style.transform=""; wordsEl.textContent=""; wordsEl.appendChild(caretEl); wordEls=[];
+    var init=CFG.val;
+    if(CFG.mode==="time") init=250;
+    else if(CFG.mode==="zen") init=[""];
+    else if(CFG.mode==="quote"){ var L=CFG.val==="short"?[0,70]:CFG.val==="medium"?[70,140]:[140,999], q=QUOTES.filter(function(x){return x.length>=L[0]&&x.length<L[1];}); init=q[rnd(q.length)].split(" "); }
+    else if(CFG.mode==="custom") init=(CFG.text||"paste your own text with the custom menu and practice anything you like").split(/\s+/);
+    addWords(init);
+    caretEl.classList.add("idle");
+    document.body.classList.remove("typing");
+    $("result").hidden=true; $("stage").hidden=false;
+    live(); placeCaret();
+  }
+  function buildCfg(){
+    var v=$("vals"); v.textContent="";
+    VALS[CFG.mode].forEach(function(n){
+      var b=document.createElement("button"); b.type="button"; b.textContent=n;
+      b.setAttribute("aria-pressed",n===CFG.val);
+      b.addEventListener("click",function(){CFG.val=n; changed();});
+      v.appendChild(b);
+    });
+    document.querySelectorAll("[data-m]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.m===CFG.mode);});
+    $("punct").setAttribute("aria-pressed",CFG.punct); $("nums").setAttribute("aria-pressed",CFG.nums);
+    var tw=CFG.mode==="time"||CFG.mode==="words";
+    if(tw){ var cb=document.createElement("button"); cb.type="button"; cb.textContent="\u270E"; cb.title="custom value"; cb.setAttribute("aria-pressed",VALS[CFG.mode].indexOf(CFG.val)<0);
+      cb.addEventListener("click",function(){ var n=parseInt(prompt("Custom "+CFG.mode+" value",CFG.val),10); if(n>0&&n<=(CFG.mode==="time"?3600:1000)){CFG.val=n; changed();} }); v.appendChild(cb); }
+    v.style.display=VALS[CFG.mode].length?"":"none";
+    $("gOpts").classList.toggle("dim",!tw);
+    $("lang").textContent="\u25CD "+CFG.lang; $("lang").className=tw?"":"off";
+    $("zenHint").hidden=CFG.mode!=="zen"; $("themeBtn").textContent="\u25D0 "+CFG.theme;
+  }
+  function changed(){
+    try{localStorage.setItem("tt-cfg",JSON.stringify(CFG));}catch(e){}
+    buildCfg(); restart();
+    if(document.activeElement) document.activeElement.blur();
+  }
+  document.querySelectorAll("[data-m]").forEach(function(b){
+    b.addEventListener("click",function(){CFG.mode=b.dataset.m; CFG.val=VALS[CFG.mode][1]; changed(); if(CFG.mode==="custom") openCustom();});
+  });
+  $("punct").addEventListener("click",function(){CFG.punct=!CFG.punct; changed();});
+  $("nums").addEventListener("click",function(){CFG.nums=!CFG.nums; changed();});
+  $("restart").addEventListener("click",function(){restart(); this.blur();});
+  $("next").addEventListener("click",function(){restart(); this.blur();});
+
+
+  /* ---- modals, command line, settings ---- */
+  var modal=false;
+  function openModal(h){ $("mbox").innerHTML=h; $("modal").hidden=false; modal=true; }
+  function closeModal(){ $("modal").hidden=true; $("mbox").innerHTML=""; modal=false; if(document.activeElement) document.activeElement.blur(); }
+  $("modal").addEventListener("mousedown",function(e){ if(e.target===this) closeModal(); });
+  function toast(m){ var t=$("toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toast.h); toast.h=setTimeout(function(){t.classList.remove("on");},1800); }
+  function save(){ try{localStorage.setItem("tt-cfg",JSON.stringify(CFG));}catch(e){} }
+  function applyTheme(){ var t=THEMES[CFG.theme]; for(var k in t) document.documentElement.style.setProperty("--"+k,t[k]); document.documentElement.style.setProperty("--fs",CFG.fs); $("themeBtn").textContent="\u25D0 "+CFG.theme; if(S&&!S.done) placeCaret(); }
+  function setMode(m,v){ CFG.mode=m; CFG.val=v!==undefined?v:VALS[m][1]; changed(); if(m==="custom") openCustom(); }
+  function cmdList(){
+    var c=[];
+    ["time","words","quote","zen","custom"].forEach(function(m){c.push(["mode "+m,function(){setMode(m);}]);});
+    VALS.time.forEach(function(n){c.push(["time "+n,function(){setMode("time",n);}]);});
+    VALS.words.forEach(function(n){c.push(["words "+n,function(){setMode("words",n);}]);});
+    VALS.quote.forEach(function(n){c.push(["quote "+n,function(){setMode("quote",n);}]);});
+    c.push(["toggle punctuation",function(){CFG.punct=!CFG.punct;changed();}],["toggle numbers",function(){CFG.nums=!CFG.nums;changed();}],["restart test",restart],["edit custom text",openCustom]);
+    Object.keys(LANGS).forEach(function(l){c.push(["language "+l,function(){CFG.lang=l;changed();}]);});
+    Object.keys(THEMES).forEach(function(t){c.push(["theme "+t,function(){CFG.theme=t;applyTheme();save();}]);});
+    [["small",.85],["medium",1],["large",1.25]].forEach(function(f){c.push(["font size "+f[0],function(){CFG.fs=f[1];applyTheme();save();}]);});
+    return c;
+  }
+  function openCmd(q){
+    openModal('<input id="cq" placeholder="type to search commands..." autocomplete="off"><div class="cmds" id="cl"></div>');
+    var inp=$("cq"), list=cmdList(), sel=0, shown=[];
+    function draw(){
+      shown=list.filter(function(x){return x[0].indexOf(inp.value.toLowerCase())>=0;}); sel=Math.max(0,Math.min(sel,shown.length-1)); $("cl").innerHTML="";
+      shown.forEach(function(x,i){ var b=document.createElement("button"); b.type="button"; b.textContent=x[0]; b.className=i===sel?"sel":""; b.onclick=function(){run(i);}; $("cl").appendChild(b); });
+      var el=$("cl").querySelector(".sel"); if(el) el.scrollIntoView({block:"nearest"});
+    }
+    function run(i){ if(!shown[i]) return; var f=shown[i][1]; closeModal(); f(); }
+    inp.value=q; inp.oninput=function(){sel=0;draw();};
+    inp.onkeydown=function(e){
+      if(e.key==="ArrowDown"){e.preventDefault();sel++;draw();} else if(e.key==="ArrowUp"){e.preventDefault();sel--;draw();} else if(e.key==="Enter"){e.preventDefault();run(sel);}
+    };
+    draw(); inp.focus();
+  }
+  function openCustom(){
+    openModal('<h2>custom text</h2><textarea id="ct" placeholder="paste the text you want to practice"></textarea><div class="opts"><button id="cok" type="button">start</button></div>');
+    $("ct").value=CFG.text; $("ct").focus();
+    $("cok").onclick=function(){ var v=$("ct").value.trim(); if(v) CFG.text=v; closeModal(); CFG.mode="custom"; changed(); };
+  }
+  function openSettings(){
+    openModal('<h2>theme</h2><div class="opts" id="o1"></div><h2>font size</h2><div class="opts" id="o2"></div>');
+    Object.keys(THEMES).forEach(function(t){ var b=document.createElement("button"); b.type="button"; b.textContent=t; b.setAttribute("aria-pressed",t===CFG.theme); b.onclick=function(){CFG.theme=t;applyTheme();save();openSettings();}; $("o1").appendChild(b); });
+    [["small",.85],["medium",1],["large",1.25]].forEach(function(f){ var b=document.createElement("button"); b.type="button"; b.textContent=f[0]; b.setAttribute("aria-pressed",f[1]===CFG.fs); b.onclick=function(){CFG.fs=f[1];applyTheme();save();openSettings();}; $("o2").appendChild(b); });
+  }
+  function openBests(){
+    var rows=[]; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k.indexOf("tt-best-")===0) rows.push([k.slice(8),+localStorage.getItem(k)]); } }catch(e){}
+    rows.sort(function(a,b){return b[1]-a[1];});
+    openModal('<h2>personal bests</h2>'+(rows.length?rows.map(function(r){return '<p>'+r[0]+' <b style="float:right;color:var(--main)">'+r[1]+' wpm</b></p>';}).join(""):'<p>no completed tests yet</p>'));
+  }
+  function openProfile(){
+    var H=[]; try{H=JSON.parse(localStorage.getItem("tt-hist")||"[]");}catch(e){}
+    var n=H.length, aw=n?Math.round(H.reduce(function(a,x){return a+x.w;},0)/n):0, aa=n?Math.round(H.reduce(function(a,x){return a+x.a;},0)/n):0;
+    openModal('<h2>profile</h2><p>tests completed <b style="float:right;color:var(--main)">'+n+'</b></p><p>average wpm <b style="float:right;color:var(--main)">'+aw+'</b></p><p>average accuracy <b style="float:right;color:var(--main)">'+aa+'%</b></p><div class="opts" style="margin-top:14px"><button id="clr" type="button">reset history</button></div>');
+    $("clr").onclick=function(){ try{ Object.keys(localStorage).filter(function(k){return /^tt-(hist|best-)/.test(k);}).forEach(function(k){localStorage.removeItem(k);}); }catch(e){} openProfile(); };
+  }
+  function openInfo(){
+    openModal('<h2>about</h2><p>Type the words shown as fast and accurately as you can. 1 word = 5 characters.</p><p><b>modes:</b> time, words, quote, zen (free typing, shift+enter to finish) and custom (your own text).</p><p><b>keys:</b> tab+enter restart, esc / ctrl+shift+p command line, ctrl+backspace delete word.</p>');
+  }
+  $("bCmd").onclick=function(){openCmd("");}; $("bBest").onclick=openBests; $("bInfo").onclick=openInfo; $("bSet").onclick=openSettings; $("bUser").onclick=openProfile;
+  $("bBell").onclick=function(){toast("no new notifications"); this.blur();};
+  $("themeBtn").onclick=function(){openCmd("theme ");};
+  $("lang").onclick=function(){ var ks=Object.keys(LANGS); CFG.lang=ks[(ks.indexOf(CFG.lang)+1)%ks.length]; changed(); };
+  document.querySelectorAll(".links a").forEach(function(a){a.onclick=function(e){e.preventDefault();toast("placeholder link: add your own URL");};});
+
+  buildCfg(); restart(); applyTheme();
+})();
+</script>
+</body>
+</html>
